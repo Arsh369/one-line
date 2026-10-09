@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import generateLevel from "./levels/level";
 
 function App() {
-  const [currentLevelIndex, setCurrentLevelIndex] = useState(()=>{
+  const [currentLevelIndex, setCurrentLevelIndex] = useState(() => {
     const saved = localStorage.getItem("currentLevel");
     return saved ? Number(saved) : 0;
   });
@@ -16,9 +16,9 @@ function App() {
   const [startPos, setStartPos] = useState("");
   const [totalPlayable, setTotalPlayable] = useState(0);
 
-  useEffect(()=>{
-    localStorage.setItem("currentLevel",currentLevelIndex);
-  },[currentLevelIndex])
+  useEffect(() => {
+    localStorage.setItem("currentLevel", currentLevelIndex);
+  }, [currentLevelIndex]);
 
   useEffect(() => {
     const currentGrid = generateLevel("expert");
@@ -61,7 +61,11 @@ function App() {
   useEffect(() => {
     const handlePointerUp = () => setIsDrawing(false);
     window.addEventListener("pointerup", handlePointerUp);
-    return () => window.removeEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
+    return () => {
+      (window.removeEventListener("pointerup", handlePointerUp),
+        window.removeEventListener("pointercancel", handleNextLevel));
+    };
   }, []);
 
   const isAdjacent = (pos1, pos2) => {
@@ -71,21 +75,38 @@ function App() {
     return Math.abs(y1 - y2) + Math.abs(x1 - x2) === 1;
   };
 
-  const handlePointerDown = (y, x) => {
+  const handlePointerDown = (e, y, x) => {
     if (isWon) return;
+
+    e.preventDefault();
+
     const pos = `${y}-${x}`;
 
     if (pos === startPos) {
       setPath([startPos]);
       setIsDrawing(true);
-    } else if (pos === path[path.length - 1]) {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } else if (path.includes(pos)) {
+      setPath((prev) => prev.slice(0, prev.indexOf(pos) + 1));
       setIsDrawing(true);
+      e.currentTarget.setPointerCapture(e.pointerId);
     }
   };
 
-  const handlePointerEnter = (y, x) => {
+  const handleGridPointerMove = (e) => {
     if (!isDrawing || isWon) return;
 
+    const element = document.elementFromPoint(e.clientX, e.clientY);
+    const cellElement = element?.closest("[data-cell]");
+
+    if (!cellElement) return;
+
+    const [y, x] = cellElement.dataset.cell.split("-").map(Number);
+
+    handlePointerEnter(y, x);
+  };
+
+  const handlePointerEnter = (y, x) => {
     const pos = `${y}-${x}`;
     const lastPos = path[path.length - 1];
 
@@ -100,9 +121,8 @@ function App() {
       setPath((prev) => [...prev, pos]);
     }
   };
-
   const handleNextLevel = () => {
-    setCurrentLevelIndex(currentLevelIndex+1);
+    setCurrentLevelIndex(currentLevelIndex + 1);
   };
 
   return (
@@ -122,12 +142,15 @@ function App() {
       )}
 
       {/* Top Bar */}
-        <div className="px-6 py-2 my-4 rounded-full font-bold tracking-widest text-sm shadow-inner transition-colors duration-500 bg-gray-600/50 text-gray-300">
-          LEVEL {currentLevelIndex}
-        </div>
+      <div className="px-6 py-2 my-4 rounded-full font-bold tracking-widest text-sm shadow-inner transition-colors duration-500 bg-gray-600/50 text-gray-300">
+        LEVEL {currentLevelIndex}
+      </div>
 
       {/* Game Grid Container */}
-      <div className="w-full max-w-sm grid grid-cols-5 relative mb-12">
+      <div
+        className="w-full max-w-sm grid grid-cols-5 relative mb-12 touch-none"
+        onPointerMove={handleGridPointerMove}
+      >
         {grid.map((row, y) =>
           row.map((cell, x) => {
             const pos = `${y}-${x}`;
@@ -140,16 +163,17 @@ function App() {
                   <div className="w-full h-full bg-[#4a4a4a] rounded-xl shadow-[inset_0_-4px_0_rgba(0,0,0,0.4)]" />
                 ) : (
                   <div
-                    onPointerDown={() => handlePointerDown(y, x)}
-                    onPointerEnter={() => handlePointerEnter(y, x)}
-                    className={`w-full h-full rounded-xl flex items-center justify-center relative cursor-pointer transition-colors duration-300
-                      ${
-                        isActive
-                          ? "bg-[#38bdf8] shadow-[inset_0_-4px_0_rgba(0,0,0,0.2)]"
-                          : "bg-white shadow-[inset_0_-4px_0_rgba(0,0,0,0.1)]"
-                      }
-                      ${isWon && isActive ? "brightness-110" : ""} ${isStart ? "bg-red-300":""}
-                    `}
+                    data-cell={`${y}-${x}`}
+                    onPointerDown={(e) => handlePointerDown(e, y, x)}
+                    className={`w-full h-full rounded-xl flex items-center justify-center relative touch-none cursor-pointer transition-colors duration-300
+                ${
+                  isActive
+                    ? "bg-[#38bdf8] shadow-[inset_0_-4px_0_rgba(0,0,0,0.2)]"
+                    : "bg-white shadow-[inset_0_-4px_0_rgba(0,0,0,0.1)]"
+                }
+                ${isWon && isActive ? "brightness-110" : ""}
+                ${isStart ? "bg-red-300" : ""}
+              `}
                   />
                 )}
               </div>
