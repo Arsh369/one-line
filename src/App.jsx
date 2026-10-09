@@ -2,7 +2,11 @@ import React, { useState, useEffect } from "react";
 import generateLevel from "./levels/level";
 
 function App() {
-  const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
+  const [currentLevelIndex, setCurrentLevelIndex] = useState(()=>{
+    const saved = localStorage.getItem("currentLevel");
+    return saved ? Number(saved) : 0;
+  });
+
   const [grid, setGrid] = useState([]);
   const [path, setPath] = useState([]);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -12,10 +16,12 @@ function App() {
   const [startPos, setStartPos] = useState("");
   const [totalPlayable, setTotalPlayable] = useState(0);
 
+  useEffect(()=>{
+    localStorage.setItem("currentLevel",currentLevelIndex);
+  },[currentLevelIndex])
+
   useEffect(() => {
-    const griid = generateLevel("easy");
-    const currentGrid = griid.grid;
-    console.log(currentGrid);
+    const currentGrid = generateLevel("expert");
     setGrid(currentGrid);
 
     let playableCount = 0;
@@ -96,11 +102,7 @@ function App() {
   };
 
   const handleNextLevel = () => {
-    if (currentLevelIndex < LEVELS.length - 1) {
-      setCurrentLevelIndex((prev) => prev + 1);
-    } else {
-      setCurrentLevelIndex(0);
-    }
+    setCurrentLevelIndex(currentLevelIndex+1);
   };
 
   return (
@@ -120,17 +122,9 @@ function App() {
       )}
 
       {/* Top Bar */}
-      <div className="w-full max-w-sm flex justify-between items-center mb-16 mt-4">
-        <button className="bg-gray-500/40 hover:bg-gray-500/60 transition rounded-xl text-2xl font-serif italic text-gray-300 w-12 h-12 flex items-center justify-center shadow-lg">
-          i
-        </button>
-        <div className="px-6 py-2 rounded-full font-bold tracking-widest text-sm shadow-inner transition-colors duration-500 bg-gray-600/50 text-gray-300">
-          LEVEL {(currentLevelIndex + 1).toString().padStart(2, "0")}
+        <div className="px-6 py-2 my-4 rounded-full font-bold tracking-widest text-sm shadow-inner transition-colors duration-500 bg-gray-600/50 text-gray-300">
+          LEVEL {currentLevelIndex}
         </div>
-        <button className="bg-gray-500/40 hover:bg-gray-500/60 transition rounded-xl text-2xl text-gray-300 w-12 h-12 flex items-center justify-center shadow-lg">
-          ⚙
-        </button>
-      </div>
 
       {/* Game Grid Container */}
       <div className="w-full max-w-sm grid grid-cols-5 relative mb-12">
@@ -150,11 +144,11 @@ function App() {
                     onPointerEnter={() => handlePointerEnter(y, x)}
                     className={`w-full h-full rounded-xl flex items-center justify-center relative cursor-pointer transition-colors duration-300
                       ${
-                        isActive || isStart
+                        isActive
                           ? "bg-[#38bdf8] shadow-[inset_0_-4px_0_rgba(0,0,0,0.2)]"
                           : "bg-white shadow-[inset_0_-4px_0_rgba(0,0,0,0.1)]"
                       }
-                      ${isWon && isActive ? "brightness-110" : ""}
+                      ${isWon && isActive ? "brightness-110" : ""} ${isStart ? "bg-red-300":""}
                     `}
                   />
                 )}
@@ -162,16 +156,6 @@ function App() {
             );
           }),
         )}
-      </div>
-
-      {/* Bottom Area */}
-      <div className="mt-auto mb-12 flex flex-col items-center h-24 justify-center">
-        <h1
-          className="text-3xl font-bold text-[#38bdf8] tracking-wide drop-shadow-[0_0_8px_rgba(56,189,248,0.5)] transition-opacity duration-300"
-          style={{ opacity: showCelebration ? 0 : 1 }}
-        >
-          Dare To Solve!
-        </h1>
       </div>
     </div>
   );

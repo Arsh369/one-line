@@ -142,15 +142,16 @@ function generateLevel(difficulty) {
 
   const grid = createGrid(GRID_SIZE, solution);
 
-  return {
-    difficulty,
-    playableCells: targetCells,
-    grid,
+//   return {
+//     difficulty,
+//     playableCells: targetCells,
+//     grid,
 
-    // Keep this private from the player.
-    // Useful for testing and debugging.
-    solution
-  };
+//     // Keep this private from the player.
+//     // Useful for testing and debugging.
+//     solution
+//   };
+return grid;
 }
 
 export default generateLevel;
