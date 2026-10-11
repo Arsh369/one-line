@@ -63,8 +63,8 @@ function App() {
     window.addEventListener("pointerup", handlePointerUp);
     window.addEventListener("pointercancel", handlePointerUp);
     return () => {
-      (window.removeEventListener("pointerup", handlePointerUp),
-        window.removeEventListener("pointercancel", handleNextLevel));
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
     };
   }, []);
 
@@ -121,34 +121,51 @@ function App() {
       setPath((prev) => [...prev, pos]);
     }
   };
+
   const handleNextLevel = () => {
     setCurrentLevelIndex(currentLevelIndex + 1);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white flex flex-col items-center p-6 font-sans select-none touch-none overflow-hidden relative">
+    <div className="min-h-screen bg-[#202322] text-[#F5F5F5] flex flex-col items-center justify-between p-6 font-sans select-none touch-none overflow-hidden relative">
       {/* Celebration Overlay */}
       {showCelebration && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-500">
-          <div className="text-center animate-bounce">
-            <h2 className="text-5xl font-extrabold text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.8)] mb-4 tracking-wider">
-              Level Cleared!
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#171717]/90 backdrop-blur-md transition-all duration-300">
+          <div className="text-center p-8 bg-[#202020] border border-[#303030] rounded-2xl shadow-[0_0_30px_rgba(0,217,130,0.15)] transform animate-in fade-in zoom-in-95 duration-200">
+            {/* Success Badge Icon */}
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#00BF70]/20 border border-[#00D982] flex items-center justify-center text-[#00D982] text-xl font-bold shadow-[0_0_15px_rgba(0,217,130,0.3)] animate-pulse">
+              ✓
+            </div>
+
+            {/* Title */}
+            <h2 className="text-3xl md:text-4xl font-extrabold text-[#F5F5F5] tracking-widest uppercase mb-2">
+              Level{" "}
+              <span className="text-[#00D982] drop-shadow-[0_0_10px_rgba(0,217,130,0.4)]">
+                Cleared
+              </span>
             </h2>
-            <p className="text-xl text-[#38bdf8] font-medium tracking-widest animate-pulse">
-              Loading Next Level...
+
+            {/* Arcade Accent Line */}
+            <div className="w-16 h-1 bg-[#00BF70] mx-auto rounded-full mb-4 shadow-[0_0_10px_#00BF70]" />
+
+            {/* Subtext */}
+            <p className="text-xs md:text-sm text-[#999999] font-mono tracking-widest uppercase animate-pulse">
+              Loading Next Stage...
             </p>
           </div>
         </div>
       )}
 
       {/* Top Bar */}
-      <div className="px-6 py-2 my-4 rounded-full font-bold tracking-widest text-sm shadow-inner transition-colors duration-500 bg-gray-600/50 text-gray-300">
-        LEVEL {currentLevelIndex}
+      <div className="w-full max-w-sm flex justify-center mt-2">
+        <div className="px-6 py-2 rounded-xl bg-[#202020] border border-[#303030] font-bold tracking-widest text-xs md:text-sm text-[#F5F5F5] shadow-[0_4px_0_#087A4B]">
+          LEVEL {currentLevelIndex}
+        </div>
       </div>
 
       {/* Game Grid Container */}
       <div
-        className="w-full max-w-sm grid grid-cols-5 relative mb-12 touch-none"
+        className="w-full max-w-sm grid grid-cols-5 gap-2 p-4 bg-[#171717] border border-[#303030] rounded-2xl shadow-2xl relative my-auto touch-none"
         onPointerMove={handleGridPointerMove}
       >
         {grid.map((row, y) =>
@@ -158,29 +175,45 @@ function App() {
             const isStart = cell === 2;
 
             return (
-              <div key={pos} className="w-full aspect-square p-1 relative">
-                {cell === 0 ? null : cell === 3 ? (
-                  <div className="w-full h-full bg-[#4a4a4a] rounded-xl shadow-[inset_0_-4px_0_rgba(0,0,0,0.4)]" />
+              <div key={pos} className="w-full aspect-square relative">
+                {cell === 0 ? null : cell === 3 ? ( // Empty space
+                  // Blocked / Obstacle block (distinct dark hatched/bordered look)
+                  <div className="w-full h-full bg-[#111111] border border-dashed border-[#444444] rounded-lg flex items-center justify-center opacity-7rip shadow-inner">
+                    <div className="w-2 h-2 rounded-full bg-[#333333]" />
+                  </div>
                 ) : (
+                  // Playable block (Start or normal tile)
                   <div
                     data-cell={`${y}-${x}`}
                     onPointerDown={(e) => handlePointerDown(e, y, x)}
-                    className={`w-full h-full rounded-xl flex items-center justify-center relative touch-none cursor-pointer transition-colors duration-300
-                ${
-                  isActive
-                    ? "bg-[#38bdf8] shadow-[inset_0_-4px_0_rgba(0,0,0,0.2)]"
-                    : "bg-white shadow-[inset_0_-4px_0_rgba(0,0,0,0.1)]"
-                }
-                ${isWon && isActive ? "brightness-110" : ""}
-                ${isStart ? "bg-red-300" : ""}
-              `}
-                  />
+                    className={`w-full h-full rounded-lg flex items-center justify-center relative touch-none cursor-pointer transition-all duration-150 shadow-sm
+                      ${
+                        isActive
+                          ? "bg-[#00BF70] text-[#080D0B] shadow-[0_3px_0_#087A4B] scale-[0.98]"
+                          : "bg-[#252827] border border-[#3A3F3D] text-[#F5F5F5] hover:border-[#00BF70]"
+                      }
+                      ${isWon && isActive ? "bg-[#00D982]" : ""}
+                      ${
+                        isStart && !isActive
+                          ? "border-2 border-[#00D982] bg-[#1E2E28] ring-2 ring-[#00D982]/30"
+                          : ""
+                      }
+                    `}
+                  >
+                    {/* Visual indicator for Start Block */}
+                    {isStart && (
+                      <div className="w-3 h-3 rounded-full bg-[hsl(0,0%,100%)] animate-pulse shadow-[0_0_8px_#00D982]" />
+                    )}
+                  </div>
                 )}
               </div>
             );
           }),
         )}
       </div>
+
+      {/* Bottom spacer / Footer placeholder to balance layout */}
+      <div className="w-full max-w-sm h-10" />
     </div>
   );
 }
