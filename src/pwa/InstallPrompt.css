@@ -1,0 +1,99 @@
+/* Map these to your design-system tokens (the fallbacks are only defaults). */
+.pwa-install {
+  --pi-bg: var(--color-surface, #ffffff);
+  --pi-text: var(--color-text, #111827);
+  --pi-muted: var(--color-text-muted, #6b7280);
+  --pi-primary: var(--color-primary, #4f46e5);
+  --pi-primary-contrast: var(--color-on-primary, #ffffff);
+  --pi-border: var(--color-border, rgba(0, 0, 0, 0.08));
+  --pi-radius: var(--radius-lg, 16px);
+  --pi-font: var(--font-family, inherit);
+
+  position: fixed;
+  z-index: 1000;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: min(420px, calc(100% - 32px));
+  box-sizing: border-box;
+  padding: 20px;
+  background: var(--pi-bg);
+  color: var(--pi-text);
+  font-family: var(--pi-font);
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  animation: pi-in 0.25s ease-out;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pwa-install {
+    --pi-bg: var(--color-surface, #1f2937);
+    --pi-text: var(--color-text, #f9fafb);
+    --pi-muted: var(--color-text-muted, #9ca3af);
+    --pi-border: var(--color-border, rgba(255, 255, 255, 0.12));
+  }
+}
+
+/* Desktop: dock bottom-right instead of centered */
+@media (min-width: 640px) {
+  .pwa-install {
+    left: auto;
+    right: 24px;
+    bottom: 24px;
+    transform: none;
+  }
+}
+
+.pwa-install__header { display: flex; gap: 14px; align-items: center; padding-right: 28px; }
+.pwa-install__icon { border-radius: 12px; flex-shrink: 0; object-fit: cover; }
+.pwa-install__title { margin: 0 0 2px; font-size: 1.05rem; font-weight: 700; }
+.pwa-install__desc { margin: 0; font-size: 0.875rem; line-height: 1.4; color: var(--pi-muted); }
+
+.pwa-install__btn {
+  margin-top: 16px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--pi-primary-contrast);
+  background: var(--pi-primary);
+  border: 0;
+  border-radius: calc(var(--pi-radius) - 4px);
+  cursor: pointer;
+}
+.pwa-install__btn:hover { filter: brightness(1.08); }
+
+.pwa-install__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--pi-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.pwa-install__close:hover { background: var(--pi-border); color: var(--pi-text); }
+
+.pwa-install__btn:focus-visible,
+.pwa-install__close:focus-visible {
+  outline: 2px solid var(--pi-primary);
+  outline-offset: 2px;
+}
+
+.pwa-install__steps { margin: 16px 0 0; padding-left: 20px; font-size: 0.9rem; line-height: 1.6; }
+.pwa-install__share { vertical-align: -2px; margin: 0 4px; }
+
+@keyframes pi-in {
+  from { opacity: 0; transform: translate(var(--pi-tx, 0), 12px); }
+  to   { opacity: 1; transform: translate(var(--pi-tx, 0), 0); }
+}
+@media (max-width: 639px) { .pwa-install { --pi-tx: -50%; } }
+
+@media (prefers-reduced-motion: reduce) { .pwa-install { animation: none; } }
