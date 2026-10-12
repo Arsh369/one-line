@@ -7,6 +7,7 @@ import InstallPrompt from "./pwa/InstallPrompt.jsx";
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
-    <InstallPrompt appName="Your App" description="..." iconSrc="/pwa-80.png" />
+    <InstallPrompt appName="One line
+    " description="One line block puzzle" iconSrc="/one_line_block_puzzle.png" />
   </StrictMode>,
 )

@@ -78,9 +78,9 @@ function Board({ path, hint = null, gridRef, handlers = {} }) {
 
           let tone = "border-[#00C878] bg-[#00C878]";
           if (isBlocked) {
-            tone = "border-dashed border-[#303532] bg-[#101211]";
+            tone = "border-dashed border-[#888888] bg-[#101211]";
           } else if (isEmpty) {
-            tone = "border-[#393E3B] bg-[#2A2D2C]";
+            tone = "bg-[#111111] border border-dashed border-[#888888]";
           }
 
           return (
@@ -94,7 +94,7 @@ function Board({ path, hint = null, gridRef, handlers = {} }) {
                             }`}
               >
                 {isBlocked && (
-                  <span className="h-1 w-1 rounded-full bg-[#3A3D3C]" />
+                  <span className="h-2 w-2 rounded-full bg-[#666666]" />
                 )}
               </div>
             </div>
@@ -312,7 +312,7 @@ export default function Tutorial({ onStartGame }) {
                   <img
                     src="/one_line_block_puzzle.png"
                     alt="one line"
-                    className="w-full h-full object-cover scale-110"
+                    className="w-full h-full object-cover scale-80"
                   />
                 </div>
 
