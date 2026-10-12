@@ -169,6 +169,36 @@ function App() {
         className="w-full max-w-sm grid grid-cols-5 gap-2 p-4 bg-[#171717] border border-[#303030] rounded-2xl shadow-2xl relative my-auto touch-none"
         onPointerMove={handleGridPointerMove}
       >
+        {/* SVG overlay adjusted with inset-4 to match the parent's p-4 padding */}
+        <svg
+          className="absolute inset-4 pointer-events-none z-10 overflow-visible"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+        >
+          {path.length > 1 &&
+            path.slice(0, -1).map((pos, index) => {
+              const [y1, x1] = pos.split("-").map(Number);
+              const [y2, x2] = path[index + 1].split("-").map(Number);
+
+              // Exact center calculation for a 5x5 grid
+              const getCenter = (coord) => coord * 20 + 10;
+
+              return (
+                <line
+                  key={`${pos}-${path[index + 1]}`}
+                  x1={getCenter(x1)}
+                  y1={getCenter(y1)}
+                  x2={getCenter(x2)}
+                  y2={getCenter(y2)}
+                  stroke="#FFFFFF"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              );
+            })}
+        </svg>
+
         {grid.map((row, y) =>
           row.map((cell, x) => {
             const pos = `${y}-${x}`;
@@ -177,33 +207,26 @@ function App() {
 
             return (
               <div key={pos} className="w-full aspect-square relative">
-                {cell === 0 ? null : cell === 3 ? ( // Empty space
-                  // Blocked / Obstacle block (distinct dark hatched/bordered look)
-                  <div className="w-full h-full bg-[#111111] border border-dashed border-[#444444] rounded-lg flex items-center justify-center opacity-7rip shadow-inner">
-                    <div className="w-2 h-2 rounded-full bg-[#333333]" />
+                {cell === 0 ? null : cell === 3 ? (
+                  <div className="w-full h-full bg-[#111111] border border-dashed border-[#888888] rounded-lg flex items-center justify-center shadow-inner">
+                    <div className="w-2 h-2 rounded-full bg-[#666666]" />
                   </div>
                 ) : (
-                  // Playable block (Start or normal tile)
                   <div
                     data-cell={`${y}-${x}`}
                     onPointerDown={(e) => handlePointerDown(e, y, x)}
-                    className={`w-full h-full rounded-lg flex items-center justify-center relative touch-none cursor-pointer transition-all duration-150 shadow-sm
-                      ${
-                        isActive
-                          ? "bg-[#00BF70] text-[#080D0B] shadow-[0_3px_0_#087A4B] scale-[0.98]"
-                          : "bg-[#252827] border border-[#3A3F3D] text-[#F5F5F5] hover:border-[#00BF70]"
-                      }
-                      ${isWon && isActive ? "bg-[#00D982]" : ""}
-                      ${
-                        isStart && !isActive
-                          ? "border-2 border-[#00D982] bg-[#1E2E28] ring-2 ring-[#00D982]/30"
-                          : ""
-                      }
-                    `}
+                    className={`w-full h-full rounded-lg flex items-center justify-center relative touch-none cursor-pointer transition-all duration-150 shadow-sm ${
+                      isActive
+                        ? "bg-[#00BF70] text-[#080D0B] shadow-[0_3px_0_#087A4B] scale-[0.98]"
+                        : "bg-[#252827] border border-[#3A3F3D] text-[#F5F5F5] hover:border-[#00BF70]"
+                    } ${isWon && isActive ? "bg-[#00D982]" : ""} ${
+                      isStart && !isActive
+                        ? "border-2 border-[#00D982] bg-[#1E2E28] ring-2 ring-[#00D982]/30"
+                        : ""
+                    }`}
                   >
-                    {/* Visual indicator for Start Block */}
                     {isStart && (
-                      <div className="w-3 h-3 rounded-full bg-[hsl(0,0%,100%)] animate-pulse shadow-[0_0_8px_#00D982]" />
+                      <div className="w-6 h-6 rounded-full bg-white  shadow-[0_0_8px_#00D982]" />
                     )}
                   </div>
                 )}
@@ -213,7 +236,7 @@ function App() {
         )}
       </div>
       <div className="w-full max-w-sm h-10" />
-      <Tutorial/>
+      <Tutorial />
     </div>
   );
 }

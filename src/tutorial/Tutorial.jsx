@@ -2,26 +2,132 @@ import { useEffect, useRef, useState } from "react";
 
 const STORAGE_KEY = "oneLineTutorialCompleted";
 
-// The tutorial path follows the green blocks in your reference.
+// Tutorial puzzle, written as [row, col] from the start block to the end block.
+// One continuous line that covers all 21 green blocks:
+//   up the left edge, a small zig-zag in the middle, a loop on the right,
+//   back up to the top row, across it, and down to the end dot.
 const SOLUTION = [
-  [1, 3],
+  [4, 0],
+  [3, 0],
+  [2, 0],
+  [2, 1],
+  [3, 1],
+  [3, 2],
+  [4, 2],
+  [4, 3],
+  [3, 3],
   [2, 3],
   [2, 2],
-  [3, 2],
+  [1, 2],
+  [1, 1],
+  [1, 0],
+  [0, 0],
+  [0, 1],
+  [0, 2],
+  [0, 3],
+  [0, 4],
+  [1, 4],
+  [2, 4],
 ];
 
-// Cells with dotted borders are inactive.
-const BLOCKED_CELLS = new Set([
-  "0-2",
-  "0-3",
-  "0-4",
-  "1-4",
-  "2-4",
-  "3-4",
-]);
+const SIZE = 5;
 
-const sameCell = (a, b) =>
-  a && b && a[0] === b[0] && a[1] === b[1];
+// Dotted tiles: the line can never enter these.
+const BLOCKED_CELLS = new Set(["1-3", "3-4", "4-4"]);
+
+// Plain gray tile: not part of the path, so the tutorial leaves it empty.
+const EMPTY_CELLS = new Set(["4-1"]);
+
+const sameCell = (a, b) => !!a && !!b && a[0] === b[0] && a[1] === b[1];
+
+const isAdjacent = (a, b) =>
+  !!a && !!b && Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) === 1;
+
+const progressMessage = (count) => {
+  if (count <= 1) return "Great start! Keep dragging to the next block.";
+  if (count < 8) return "Nice! Follow the pulsing block.";
+  if (count < 15) return "You're doing great. Keep the line unbroken.";
+  return "Almost there. Head for the white dot!";
+};
+
+/**
+ * 5x5 board. The line is drawn as an SVG overlay, so it bends
+ * correctly around corners instead of showing small connector stubs.
+ */
+function Board({ path, hint = null, gridRef, handlers = {} }) {
+  const head = path.length ? path[path.length - 1] : SOLUTION[0];
+  const points = path.map(([r, c]) => `${c + 0.5},${r + 0.5}`).join(" ");
+
+  return (
+    <div
+      className="mx-auto w-full max-w-[320px] rounded-2xl border
+                 border-[#303532] bg-[#171918] p-2 sm:p-3"
+    >
+      <div
+        ref={gridRef}
+        {...handlers}
+        className="relative grid grid-cols-5 touch-none select-none"
+      >
+        {Array.from({ length: SIZE * SIZE }, (_, index) => {
+          const row = Math.floor(index / SIZE);
+          const col = index % SIZE;
+          const key = `${row}-${col}`;
+          const isBlocked = BLOCKED_CELLS.has(key);
+          const isEmpty = EMPTY_CELLS.has(key);
+          const isHint = sameCell([row, col], hint);
+
+          let tone = "border-[#00C878] bg-[#00C878]";
+          if (isBlocked) {
+            tone = "border-dashed border-[#303532] bg-[#101211]";
+          } else if (isEmpty) {
+            tone = "border-[#393E3B] bg-[#2A2D2C]";
+          }
+
+          return (
+            <div key={key} data-cell={key} className="aspect-square p-[3px] sm:p-1">
+              <div
+                className={`flex h-full w-full items-center justify-center
+                            rounded-lg border ${tone} ${
+                              isHint
+                                ? "animate-pulse ring-2 ring-white/60"
+                                : ""
+                            }`}
+              >
+                {isBlocked && (
+                  <span className="h-1 w-1 rounded-full bg-[#3A3D3C]" />
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        <svg
+          viewBox={`0 0 ${SIZE} ${SIZE}`}
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          aria-hidden="true"
+        >
+          {path.length > 1 && (
+            <polyline
+              points={points}
+              fill="none"
+              stroke="#FFFFFF"
+              strokeWidth="0.16"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          )}
+          <circle
+            cx={head[1] + 0.5}
+            cy={head[0] + 0.5}
+            r="0.2"
+            fill="#FFFFFF"
+            className={path.length === 0 ? "animate-pulse" : ""}
+          />
+        </svg>
+      </div>
+    </div>
+  );
+}
 
 export default function Tutorial({ onStartGame }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -71,32 +177,37 @@ export default function Tutorial({ onStartGame }) {
     setIsOpen(true);
   };
 
+  const getCellFromPoint = (x, y) => {
+    const element = document.elementFromPoint(x, y);
+    const cell = element?.closest("[data-cell]");
+
+    if (!cell || !gridRef.current?.contains(cell)) return null;
+
+    const [row, col] = cell.dataset.cell.split("-").map(Number);
+    return [row, col];
+  };
+
   const handlePointerDown = (event) => {
     if (step !== "playing") return;
 
-    const cell = event.target.closest("[data-cell]");
+    const position = getCellFromPoint(event.clientX, event.clientY);
 
-    if (!cell || !gridRef.current?.contains(cell)) return;
+    if (!position) return;
+    if (BLOCKED_CELLS.has(`${position[0]}-${position[1]}`)) return;
 
-    const [row, col] = cell.dataset.cell.split("-").map(Number);
-    const position = [row, col];
     const currentPath = pathRef.current;
-
-    if (BLOCKED_CELLS.has(`${row}-${col}`)) return;
 
     if (currentPath.length === 0) {
       if (!sameCell(position, SOLUTION[0])) {
-        setMessage("Start from the green block with the white dot.");
+        setMessage("Start from the bottom-left block with the white dot.");
         return;
       }
 
       updatePath([position]);
-      setMessage("Great! Keep dragging to the next green block.");
+      setMessage(progressMessage(1));
     } else {
-      const lastCell = currentPath[currentPath.length - 1];
-
-      // Allow dragging only from the current endpoint.
-      if (!sameCell(position, lastCell)) return;
+      // Dragging can only continue from the end of the line.
+      if (!sameCell(position, currentPath[currentPath.length - 1])) return;
     }
 
     draggingRef.current = true;
@@ -111,51 +222,49 @@ export default function Tutorial({ onStartGame }) {
   const handlePointerMove = (event) => {
     if (!draggingRef.current || step !== "playing") return;
 
-    const element = document.elementFromPoint(
-      event.clientX,
-      event.clientY
-    );
+    const position = getCellFromPoint(event.clientX, event.clientY);
 
-    const cell = element?.closest("[data-cell]");
-
-    if (!cell || !gridRef.current?.contains(cell)) return;
-
-    const [row, col] = cell.dataset.cell.split("-").map(Number);
-    const position = [row, col];
-
-    if (BLOCKED_CELLS.has(`${row}-${col}`)) return;
+    if (!position) return;
+    if (BLOCKED_CELLS.has(`${position[0]}-${position[1]}`)) return;
 
     const currentPath = pathRef.current;
+    const lastCell = currentPath[currentPath.length - 1];
 
-    // Ignore already visited blocks.
-    if (currentPath.some((item) => sameCell(item, position))) {
+    if (sameCell(position, lastCell)) return;
+
+    // Dragging back onto the previous block undoes the last step.
+    const previousCell = currentPath[currentPath.length - 2];
+
+    if (sameCell(position, previousCell)) {
+      updatePath(currentPath.slice(0, -1));
+      setMessage("Retracing. Drag forward to continue.");
       return;
     }
 
-    // The tutorial accepts only the next block in the example path.
-    const expectedCell = SOLUTION[currentPath.length];
+    // Ignore blocks that are already part of the line.
+    if (currentPath.some((cell) => sameCell(cell, position))) return;
 
-    if (!sameCell(position, expectedCell)) return;
+    const targetIndex = SOLUTION.findIndex((cell) => sameCell(cell, position));
+    const gap = targetIndex - currentPath.length;
 
-    // Ensure the next block is adjacent.
-    const lastCell = currentPath[currentPath.length - 1];
+    // Accept the next block, or two at once if a fast drag skipped one.
+    if (targetIndex === -1 || gap < 0 || gap > 1) {
+      if (isAdjacent(position, lastCell)) {
+        setMessage("Not that way. Follow the pulsing block.");
+      }
+      return;
+    }
 
-    const distance =
-      Math.abs(lastCell[0] - row) +
-      Math.abs(lastCell[1] - col);
-
-    if (distance !== 1) return;
-
-    const nextPath = [...currentPath, position];
+    const nextPath = SOLUTION.slice(0, targetIndex + 1);
 
     updatePath(nextPath);
 
     if (nextPath.length === SOLUTION.length) {
       draggingRef.current = false;
-      setMessage("Perfect! You completed the tutorial.");
+      setMessage("Perfect! Every block is connected.");
       setStep("success");
     } else {
-      setMessage("Nice! Keep following the green path.");
+      setMessage(progressMessage(nextPath.length));
     }
   };
 
@@ -199,13 +308,12 @@ export default function Tutorial({ onStartGame }) {
             {/* Welcome */}
             {step === "welcome" && (
               <div className="text-center">
-                <div
-                  className="mb-4 inline-flex h-14 w-14 items-center
-                             justify-center rounded-2xl
-                             border border-[#393E3B] bg-[#252927]
-                             text-3xl"
-                >
-                  <span className="text-[#00C878]">↗</span>
+                <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-[#393E3B] bg-[#252927] overflow-hidden">
+                  <img
+                    src="/one_line_block_puzzle.png"
+                    alt="one line"
+                    className="w-full h-full object-cover scale-110"
+                  />
                 </div>
 
                 <h2 className="text-2xl font-extrabold tracking-tight">
@@ -213,53 +321,17 @@ export default function Tutorial({ onStartGame }) {
                 </h2>
 
                 <p className="mt-2 text-sm leading-relaxed text-[#A3AAA5]">
-                  Connect the blocks with one continuous line.
-                  Let's learn how to play!
+                  Draw one unbroken line through every green block. Dotted
+                  tiles are blocked.
                 </p>
 
-                {/* 5x5 preview */}
-                <div
-                  className="mx-auto my-6 w-full max-w-[300px]
-                             rounded-2xl border border-[#303532]
-                             bg-[#171918] p-3 sm:p-4"
-                >
-                  <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
-                    {Array.from({ length: 25 }, (_, index) => {
-                      const row = Math.floor(index / 5);
-                      const col = index % 5;
-                      const key = `${row}-${col}`;
-                      const isBlocked = BLOCKED_CELLS.has(key);
-                      const isPath = SOLUTION.some((cell) =>
-                        sameCell(cell, [row, col])
-                      );
-                      const isStart = sameCell(
-                        [row, col],
-                        SOLUTION[0]
-                      );
-
-                      return (
-                        <div
-                          key={key}
-                          className={`flex aspect-square items-center
-                                      justify-center rounded-lg border ${
-                                        isBlocked
-                                          ? "border-dashed border-[#303532] bg-[#101211]"
-                                          : isPath
-                                            ? "border-[#00C878] bg-[#00C878]"
-                                            : "border-[#393E3B] bg-[#242827]"
-                                      }`}
-                        >
-                          {isStart && (
-                            <span className="h-3 w-3 rounded-full bg-white" />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                {/* Solved example */}
+                <div className="my-6">
+                  <Board path={SOLUTION} />
                 </div>
 
                 <p className="mb-5 text-xs text-[#858D87]">
-                  Follow the green blocks to complete the path.
+                  This is the finished puzzle. Now you try it.
                 </p>
 
                 <button
@@ -294,23 +366,19 @@ export default function Tutorial({ onStartGame }) {
                     LEARN TO PLAY
                   </p>
 
-                  <h2 className="text-xl font-extrabold">
-                    Follow the Path
-                  </h2>
+                  <h2 className="text-xl font-extrabold">Draw the line</h2>
 
                   <p className="mt-2 text-sm leading-relaxed text-[#A3AAA5]">
                     {path.length === 0
-                      ? "Press and drag from the green block with the white dot."
-                      : "Continue dragging across the connected green blocks."}
+                      ? "Press the white dot in the bottom-left corner, then drag."
+                      : "Keep dragging. Drag backwards to undo a step."}
                   </p>
                 </div>
 
                 {/* Progress */}
                 <div className="mb-5">
                   <div className="mb-2 flex justify-between text-xs">
-                    <span className="text-[#858D87]">
-                      PATH PROGRESS
-                    </span>
+                    <span className="text-[#858D87]">PATH PROGRESS</span>
 
                     <span className="font-semibold text-[#00C878]">
                       {path.length}/{SOLUTION.length}
@@ -322,97 +390,23 @@ export default function Tutorial({ onStartGame }) {
                       className="h-full rounded-full bg-[#00C878]
                                  transition-all duration-200"
                       style={{
-                        width: `${
-                          (path.length / SOLUTION.length) * 100
-                        }%`,
+                        width: `${(path.length / SOLUTION.length) * 100}%`,
                       }}
                     />
                   </div>
                 </div>
 
-                {/* 5x5 game grid */}
-                <div
-                  ref={gridRef}
-                  onPointerDown={handlePointerDown}
-                  onPointerMove={handlePointerMove}
-                  onPointerUp={handlePointerUp}
-                  onPointerCancel={handlePointerUp}
-                  className="mx-auto grid w-full max-w-[320px]
-                             grid-cols-5 gap-1.5 rounded-2xl
-                             border border-[#303532] bg-[#171918]
-                             p-3 touch-none select-none sm:gap-2 sm:p-4"
-                >
-                  {Array.from({ length: 25 }, (_, index) => {
-                    const row = Math.floor(index / 5);
-                    const col = index % 5;
-                    const key = `${row}-${col}`;
-
-                    const isBlocked = BLOCKED_CELLS.has(key);
-
-                    const visited = path.some((cell) =>
-                      sameCell(cell, [row, col])
-                    );
-
-                    const isStart = sameCell(
-                      [row, col],
-                      SOLUTION[0]
-                    );
-
-                    const isCurrent = sameCell(
-                      [row, col],
-                      path[path.length - 1]
-                    );
-
-                    return (
-                      <div
-                        key={key}
-                        data-cell={key}
-                        className={`relative flex aspect-square
-                                    items-center justify-center
-                                    rounded-lg border ${
-                                      isBlocked
-                                        ? "border-dashed border-[#303532] bg-[#101211]"
-                                        : visited
-                                          ? "border-[#00C878] bg-[#00C878]"
-                                          : "border-[#393E3B] bg-[#242827]"
-                                    } ${
-                                      isStart && path.length === 0
-                                        ? "animate-pulse ring-2 ring-[#00C878]/40"
-                                        : ""
-                                    } ${
-                                      isCurrent
-                                        ? "ring-2 ring-white/50"
-                                        : ""
-                                    }`}
-                      >
-                        {isStart && (
-                          <span
-                            className={`h-3 w-3 rounded-full ${
-                              visited ? "bg-white" : "bg-[#00C878]"
-                            }`}
-                          />
-                        )}
-
-                        {visited && !isStart && (
-                          <span className="text-lg font-bold text-white">
-                            •
-                          </span>
-                        )}
-
-                        {/* Connect adjacent visited cells */}
-                        {visited && !isCurrent && (
-                          <span className="pointer-events-none absolute
-                                           inset-0 flex items-center
-                                           justify-center">
-                            <span className="absolute right-[-7px]
-                                             top-1/2 z-10 h-1
-                                             w-2 bg-[#00C878]" />
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                <Board
+                  path={path}
+                  hint={SOLUTION[path.length] ?? null}
+                  gridRef={gridRef}
+                  handlers={{
+                    onPointerDown: handlePointerDown,
+                    onPointerMove: handlePointerMove,
+                    onPointerUp: handlePointerUp,
+                    onPointerCancel: handlePointerUp,
+                  }}
+                />
 
                 <p
                   aria-live="polite"
@@ -449,23 +443,18 @@ export default function Tutorial({ onStartGame }) {
             {/* Success */}
             {step === "success" && (
               <div className="py-6 text-center">
-                <div
-                  className="mx-auto mb-5 flex h-16 w-16
-                             items-center justify-center rounded-2xl
-                             border border-[#087A4B] bg-[#073D2B]
-                             text-3xl text-[#00C878]"
-                >
-                  ✓
+                <div className="mb-5">
+                  <Board path={SOLUTION} />
                 </div>
 
-                <h2 className="text-2xl font-extrabold">
-                  NICE WORK!
-                </h2>
+                <h2 className="text-2xl font-extrabold">NICE WORK!</h2>
 
-                <p className="mx-auto mb-7 mt-3 max-w-xs
-                              text-sm leading-relaxed text-[#A3AAA5]">
-                  You've completed the tutorial. You're ready
-                  to take on the real puzzles!
+                <p
+                  className="mx-auto mb-7 mt-3 max-w-xs
+                              text-sm leading-relaxed text-[#A3AAA5]"
+                >
+                  You covered every block with one line. You're ready to take
+                  on the real puzzles!
                 </p>
 
                 <button
@@ -475,7 +464,7 @@ export default function Tutorial({ onStartGame }) {
                              transition hover:bg-[#00D583]
                              active:scale-[0.98]"
                 >
-                  PLAY LEVEL 1 →
+                  PLAY
                 </button>
 
                 <button
