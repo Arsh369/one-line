@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import generateLevel from "./levels/level";
+import Tutorial from "./tutorial/Tutorial";
 
 function App() {
   const [currentLevelIndex, setCurrentLevelIndex] = useState(() => {
@@ -211,9 +212,8 @@ function App() {
           }),
         )}
       </div>
-
-      {/* Bottom spacer / Footer placeholder to balance layout */}
       <div className="w-full max-w-sm h-10" />
+      <Tutorial/>
     </div>
   );
 }
