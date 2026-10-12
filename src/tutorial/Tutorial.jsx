@@ -341,7 +341,7 @@ export default function Tutorial({ onStartGame }) {
                              transition hover:bg-[#00D583]
                              active:scale-[0.98]"
                 >
-                  START TUTORIAL →
+                  START TUTORIAL
                 </button>
 
                 <button

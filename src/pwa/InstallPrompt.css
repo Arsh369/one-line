@@ -3,7 +3,7 @@
   --pi-bg: var(--color-surface, #ffffff);
   --pi-text: var(--color-text, #111827);
   --pi-muted: var(--color-text-muted, #6b7280);
-  --pi-primary: var(--color-primary, #4f46e5);
+  --pi-primary: var(--color-primary, #00C878);
   --pi-primary-contrast: var(--color-on-primary, #ffffff);
   --pi-border: var(--color-border, rgba(0, 0, 0, 0.08));
   --pi-radius: var(--radius-lg, 16px);
@@ -57,7 +57,7 @@
   padding: 0 16px;
   font: inherit;
   font-weight: 600;
-  color: var(--pi-primary-contrast);
+  color: var(--pi-text);
   background: var(--pi-primary);
   border: 0;
   border-radius: calc(var(--pi-radius) - 4px);
