@@ -1,13 +1,21 @@
 import { useState, useEffect } from "react";
 import generateLevel from "./levels/level";
 import Tutorial from "./tutorial/Tutorial";
+import SplashScreen from "./splash/SplashScreen";
+
+function isInstalledPWA() {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true
+  );
+}
 
 function App() {
   const [currentLevelIndex, setCurrentLevelIndex] = useState(() => {
     const saved = localStorage.getItem("currentLevel");
     return saved ? Number(saved) : 0;
   });
-
+  const [showSplash,setShowSplash] = useState(false);
   const [grid, setGrid] = useState([]);
   const [path, setPath] = useState([]);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -16,6 +24,12 @@ function App() {
 
   const [startPos, setStartPos] = useState("");
   const [totalPlayable, setTotalPlayable] = useState(0);
+
+  useEffect(()=>{
+    if(isInstalledPWA()){
+      setShowSplash(true);
+    }
+  },[])
 
   useEffect(() => {
     localStorage.setItem("currentLevel", currentLevelIndex);
@@ -126,6 +140,12 @@ function App() {
   const handleNextLevel = () => {
     setCurrentLevelIndex(currentLevelIndex + 1);
   };
+
+  if(showSplash){
+    return (
+      <SplashScreen onComplete={()=> setShowSplash(false)}/>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#202322] text-[#F5F5F5] flex flex-col items-center justify-between p-6 font-sans select-none touch-none overflow-hidden relative">
