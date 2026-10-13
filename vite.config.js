@@ -21,7 +21,7 @@ export default defineConfig({
         icons: [
           {
             src: "/one_line_block_puzzle-2720-1200",
-            sizes: "80x80",
+            sizes: "2720x1200",
             type: "image/png",
           }
         ],
