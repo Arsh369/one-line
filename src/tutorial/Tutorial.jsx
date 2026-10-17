@@ -3,9 +3,6 @@ import { useEffect, useRef, useState } from "react";
 const STORAGE_KEY = "oneLineTutorialCompleted";
 
 // Tutorial puzzle, written as [row, col] from the start block to the end block.
-// One continuous line that covers all 21 green blocks:
-//   up the left edge, a small zig-zag in the middle, a loop on the right,
-//   back up to the top row, across it, and down to the end dot.
 const SOLUTION = [
   [4, 0],
   [3, 0],
@@ -50,10 +47,6 @@ const progressMessage = (count) => {
   return "Almost there. Head for the white dot!";
 };
 
-/**
- * 5x5 board. The line is drawn as an SVG overlay, so it bends
- * correctly around corners instead of showing small connector stubs.
- */
 function Board({ path, hint = null, gridRef, handlers = {} }) {
   const head = path.length ? path[path.length - 1] : SOLUTION[0];
   const points = path.map(([r, c]) => `${c + 0.5},${r + 0.5}`).join(" ");
@@ -129,9 +122,8 @@ function Board({ path, hint = null, gridRef, handlers = {} }) {
   );
 }
 
-export default function Tutorial({ onStartGame }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [step, setStep] = useState("welcome");
+export default function RulesScreen({ onStartGame }) {
+  const [modalState, setModalState] = useState(null); // null | 'rules' | 'welcome' | 'playing' | 'success'
   const [path, setPath] = useState([]);
   const [message, setMessage] = useState("");
 
@@ -141,9 +133,8 @@ export default function Tutorial({ onStartGame }) {
 
   useEffect(() => {
     const completed = localStorage.getItem(STORAGE_KEY);
-
     if (completed !== "true") {
-      setIsOpen(true);
+      setModalState("rules");
     }
   }, []);
 
@@ -156,25 +147,24 @@ export default function Tutorial({ onStartGame }) {
     updatePath([]);
     draggingRef.current = false;
     setMessage("");
-    setStep("playing");
+    setModalState("playing");
   };
 
   const finishTutorial = () => {
     localStorage.setItem(STORAGE_KEY, "true");
     draggingRef.current = false;
-    setIsOpen(false);
+    setModalState(null);
   };
 
   const skipTutorial = () => {
     finishTutorial();
   };
 
-  const openTutorialAgain = () => {
+  const openRulesAgain = () => {
     updatePath([]);
     setMessage("");
     draggingRef.current = false;
-    setStep("welcome");
-    setIsOpen(true);
+    setModalState("rules");
   };
 
   const getCellFromPoint = (x, y) => {
@@ -188,7 +178,7 @@ export default function Tutorial({ onStartGame }) {
   };
 
   const handlePointerDown = (event) => {
-    if (step !== "playing") return;
+    if (modalState !== "playing") return;
 
     const position = getCellFromPoint(event.clientX, event.clientY);
 
@@ -206,7 +196,6 @@ export default function Tutorial({ onStartGame }) {
       updatePath([position]);
       setMessage(progressMessage(1));
     } else {
-      // Dragging can only continue from the end of the line.
       if (!sameCell(position, currentPath[currentPath.length - 1])) return;
     }
 
@@ -220,7 +209,7 @@ export default function Tutorial({ onStartGame }) {
   };
 
   const handlePointerMove = (event) => {
-    if (!draggingRef.current || step !== "playing") return;
+    if (!draggingRef.current || modalState !== "playing") return;
 
     const position = getCellFromPoint(event.clientX, event.clientY);
 
@@ -232,7 +221,6 @@ export default function Tutorial({ onStartGame }) {
 
     if (sameCell(position, lastCell)) return;
 
-    // Dragging back onto the previous block undoes the last step.
     const previousCell = currentPath[currentPath.length - 2];
 
     if (sameCell(position, previousCell)) {
@@ -241,13 +229,11 @@ export default function Tutorial({ onStartGame }) {
       return;
     }
 
-    // Ignore blocks that are already part of the line.
     if (currentPath.some((cell) => sameCell(cell, position))) return;
 
     const targetIndex = SOLUTION.findIndex((cell) => sameCell(cell, position));
     const gap = targetIndex - currentPath.length;
 
-    // Accept the next block, or two at once if a fast drag skipped one.
     if (targetIndex === -1 || gap < 0 || gap > 1) {
       if (isAdjacent(position, lastCell)) {
         setMessage("Not that way. Follow the pulsing block.");
@@ -262,7 +248,7 @@ export default function Tutorial({ onStartGame }) {
     if (nextPath.length === SOLUTION.length) {
       draggingRef.current = false;
       setMessage("Perfect! Every block is connected.");
-      setStep("success");
+      setModalState("success");
     } else {
       setMessage(progressMessage(nextPath.length));
     }
@@ -277,12 +263,40 @@ export default function Tutorial({ onStartGame }) {
     onStartGame?.();
   };
 
+  const items = [
+    {
+      title: "Start block",
+      text: "Your path begins here.",
+      tile: (
+        <div className="h-16 w-16 rounded-xl bg-emerald-500 border border-emerald-400/60 flex items-center justify-center">
+          <span className="h-7 w-7 rounded-full bg-white" />
+        </div>
+      ),
+    },
+    {
+      title: "Blocked block",
+      text: "You can't step on this block.",
+      tile: (
+        <div className="h-16 w-16 rounded-xl bg-neutral-950 border border-dashed border-neutral-500 flex items-center justify-center">
+          <span className="h-1.5 w-1.5 rounded-full bg-neutral-500" />
+        </div>
+      ),
+    },
+    {
+      title: "Playable block",
+      text: "You can move onto this block.",
+      tile: (
+        <div className="h-16 w-16 rounded-xl bg-neutral-800 border border-neutral-700/60" />
+      ),
+    },
+  ];
+
   return (
     <>
       {/* Help button */}
-      {!isOpen && (
+      {!modalState && (
         <button
-          onClick={openTutorialAgain}
+          onClick={openRulesAgain}
           className="fixed bottom-10 right-5 z-40 rounded-full
                      border border-[#303633] bg-[#202322]
                      px-5 py-3 text-xs font-bold tracking-wider
@@ -293,190 +307,232 @@ export default function Tutorial({ onStartGame }) {
         </button>
       )}
 
-      {/* Tutorial modal */}
-      {isOpen && (
+      {/* Rules & Tutorial Modals */}
+      {modalState && (
         <div
           className="fixed inset-0 z-50 flex items-center
                      justify-center overflow-y-auto bg-black/75
                      p-4 backdrop-blur-sm"
         >
-          <div
-            className="my-auto w-full max-w-md rounded-3xl
-                       border border-[#343936] bg-[#1C1F1D]
-                       p-5 text-[#F5F5F5] shadow-2xl sm:p-7"
-          >
-            {/* Welcome */}
-            {step === "welcome" && (
-              <div className="text-center">
-                <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-[#393E3B] bg-[#252927] overflow-hidden">
-                  <img
-                    src="/one_line_block_puzzle.png"
-                    alt="one line"
-                    className="w-full h-full object-cover scale-80"
-                  />
-                </div>
+          {/* Rules Screen Modal */}
+          {modalState === "rules" && (
+            <div className="w-full max-w-sm rounded-3xl bg-neutral-950 border border-neutral-800 p-6 flex flex-col gap-6 text-neutral-200">
+              <h1 className="text-xl font-semibold tracking-tight">How to play</h1>
 
-                <h2 className="text-2xl font-extrabold tracking-tight">
-                  ONE LINE
-                </h2>
+              <ul className="flex flex-col gap-4">
+                {items.map((item) => (
+                  <li key={item.title} className="flex items-center gap-4">
+                    {item.tile}
+                    <div>
+                      <p className="font-medium">{item.title}</p>
+                      <p className="text-sm text-neutral-400">{item.text}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
 
-                <p className="mt-2 text-sm leading-relaxed text-[#A3AAA5]">
-                  Draw one unbroken line through every green block. Dotted
-                  tiles are blocked.
+              <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
+                <p className="font-medium">Rule</p>
+                <p className="text-sm text-neutral-400 mt-1">
+                  You can visit each playable block only once.
                 </p>
+              </div>
 
-                {/* Solved example */}
-                <div className="my-6">
-                  <Board path={SOLUTION} />
-                </div>
-
-                <p className="mb-5 text-xs text-[#858D87]">
-                  This is the finished puzzle. Now you try it.
-                </p>
-
+              <div className="flex gap-3">
                 <button
-                  onClick={startTutorial}
-                  className="w-full rounded-xl bg-[#00C878]
-                             px-5 py-3.5 font-bold text-[#08251A]
-                             transition hover:bg-[#00D583]
-                             active:scale-[0.98]"
+                  onClick={() => setModalState("welcome")}
+                  className="flex-1 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-medium text-neutral-950 hover:bg-emerald-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
                 >
-                  START TUTORIAL
+                  Start Tutorial
                 </button>
-
                 <button
-                  onClick={skipTutorial}
-                  className="mt-3 w-full py-2 text-sm text-[#858D87]
-                             transition hover:text-white"
+                  onClick={finishTutorial}
+                  className="rounded-lg border border-neutral-800 px-4 py-2.5 text-sm font-medium text-neutral-400 hover:bg-neutral-900"
                 >
-                  Skip tutorial
+                  Close
                 </button>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Interactive tutorial */}
-            {step === "playing" && (
-              <div>
-                <div className="mb-5 text-center">
-                  <p
-                    className="mb-2 text-[10px] font-bold
-                               uppercase tracking-[0.25em]
-                               text-[#00C878]"
-                  >
-                    LEARN TO PLAY
-                  </p>
-
-                  <h2 className="text-xl font-extrabold">Draw the line</h2>
-
-                  <p className="mt-2 text-sm leading-relaxed text-[#A3AAA5]">
-                    {path.length === 0
-                      ? "Press the white dot in the bottom-left corner, then drag."
-                      : "Keep dragging. Drag backwards to undo a step."}
-                  </p>
-                </div>
-
-                {/* Progress */}
-                <div className="mb-5">
-                  <div className="mb-2 flex justify-between text-xs">
-                    <span className="text-[#858D87]">PATH PROGRESS</span>
-
-                    <span className="font-semibold text-[#00C878]">
-                      {path.length}/{SOLUTION.length}
-                    </span>
-                  </div>
-
-                  <div className="h-1.5 overflow-hidden rounded-full bg-[#303532]">
-                    <div
-                      className="h-full rounded-full bg-[#00C878]
-                                 transition-all duration-200"
-                      style={{
-                        width: `${(path.length / SOLUTION.length) * 100}%`,
-                      }}
+          {/* Tutorial Modals container */}
+          {modalState !== "rules" && (
+            <div
+              className="my-auto w-full max-w-md rounded-3xl
+                         border border-[#343936] bg-[#1C1F1D]
+                         p-5 text-[#F5F5F5] shadow-2xl sm:p-7"
+            >
+              {/* Welcome */}
+              {modalState === "welcome" && (
+                <div className="text-center">
+                  <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-[#393E3B] bg-[#252927] overflow-hidden">
+                    <img
+                      src="/one_line_block_puzzle.png"
+                      alt="one line"
+                      className="w-full h-full object-cover scale-80"
                     />
                   </div>
-                </div>
 
-                <Board
-                  path={path}
-                  hint={SOLUTION[path.length] ?? null}
-                  gridRef={gridRef}
-                  handlers={{
-                    onPointerDown: handlePointerDown,
-                    onPointerMove: handlePointerMove,
-                    onPointerUp: handlePointerUp,
-                    onPointerCancel: handlePointerUp,
-                  }}
-                />
+                  <h2 className="text-2xl font-extrabold tracking-tight">
+                    ONE LINE
+                  </h2>
 
-                <p
-                  aria-live="polite"
-                  className="mt-4 min-h-10 text-center text-sm
-                             leading-relaxed text-[#00C878]"
-                >
-                  {message}
-                </p>
+                  <p className="mt-2 text-sm leading-relaxed text-[#A3AAA5]">
+                    Draw one unbroken line through every green block. Dotted
+                    tiles are blocked.
+                  </p>
 
-                <div className="mt-3 flex gap-3">
+                  <div className="my-6">
+                    <Board path={SOLUTION} />
+                  </div>
+
+                  <p className="mb-5 text-xs text-[#858D87]">
+                    This is the finished puzzle. Now you try it.
+                  </p>
+
                   <button
                     onClick={startTutorial}
-                    className="flex-1 rounded-xl border
-                               border-[#393E3B] bg-[#242827]
-                               px-4 py-3 text-sm font-bold
-                               transition hover:bg-[#2D3230]"
+                    className="w-full rounded-xl bg-[#00C878]
+                               px-5 py-3.5 font-bold text-[#08251A]
+                               transition hover:bg-[#00D583]
+                               active:scale-[0.98]"
                   >
-                    RESTART
+                    START TUTORIAL
                   </button>
 
                   <button
                     onClick={skipTutorial}
-                    className="flex-1 rounded-xl border
-                               border-[#393E3B] px-4 py-3
-                               text-sm font-bold text-[#A3AAA5]
-                               transition hover:bg-[#242827]"
+                    className="mt-3 w-full py-2 text-sm text-[#858D87]
+                               transition hover:text-white"
                   >
-                    SKIP
+                    Skip tutorial
                   </button>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Success */}
-            {step === "success" && (
-              <div className="py-6 text-center">
-                <div className="mb-5">
-                  <Board path={SOLUTION} />
+              {/* Interactive tutorial */}
+              {modalState === "playing" && (
+                <div>
+                  <div className="mb-5 text-center">
+                    <p
+                      className="mb-2 text-[10px] font-bold
+                                 uppercase tracking-[0.25em]
+                                 text-[#00C878]"
+                    >
+                      LEARN TO PLAY
+                    </p>
+
+                    <h2 className="text-xl font-extrabold">Draw the line</h2>
+
+                    <p className="mt-2 text-sm leading-relaxed text-[#A3AAA5]">
+                      {path.length === 0
+                        ? "Press the white dot in the bottom-left corner, then drag."
+                        : "Keep dragging. Drag backwards to undo a step."}
+                    </p>
+                  </div>
+
+                  <div className="mb-5">
+                    <div className="mb-2 flex justify-between text-xs">
+                      <span className="text-[#858D87]">PATH PROGRESS</span>
+
+                      <span className="font-semibold text-[#00C878]">
+                        {path.length}/{SOLUTION.length}
+                      </span>
+                    </div>
+
+                    <div className="h-1.5 overflow-hidden rounded-full bg-[#303532]">
+                      <div
+                        className="h-full rounded-full bg-[#00C878]
+                                   transition-all duration-200"
+                        style={{
+                          width: `${(path.length / SOLUTION.length) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <Board
+                    path={path}
+                    hint={SOLUTION[path.length] ?? null}
+                    gridRef={gridRef}
+                    handlers={{
+                      onPointerDown: handlePointerDown,
+                      onPointerMove: handlePointerMove,
+                      onPointerUp: handlePointerUp,
+                      onPointerCancel: handlePointerUp,
+                    }}
+                  />
+
+                  <p
+                    aria-live="polite"
+                    className="mt-4 min-h-10 text-center text-sm
+                               leading-relaxed text-[#00C878]"
+                  >
+                    {message}
+                  </p>
+
+                  <div className="mt-3 flex gap-3">
+                    <button
+                      onClick={startTutorial}
+                      className="flex-1 rounded-xl border
+                                 border-[#393E3B] bg-[#242827]
+                                 px-4 py-3 text-sm font-bold
+                                 transition hover:bg-[#2D3230]"
+                    >
+                      RESTART
+                    </button>
+
+                    <button
+                      onClick={skipTutorial}
+                      className="flex-1 rounded-xl border
+                                 border-[#393E3B] px-4 py-3
+                                 text-sm font-bold text-[#A3AAA5]
+                                 transition hover:bg-[#242827]"
+                    >
+                      SKIP
+                    </button>
+                  </div>
                 </div>
+              )}
 
-                <h2 className="text-2xl font-extrabold">NICE WORK!</h2>
+              {/* Success */}
+              {modalState === "success" && (
+                <div className="py-6 text-center">
+                  <div className="mb-5">
+                    <Board path={SOLUTION} />
+                  </div>
 
-                <p
-                  className="mx-auto mb-7 mt-3 max-w-xs
-                              text-sm leading-relaxed text-[#A3AAA5]"
-                >
-                  You covered every block with one line. You're ready to take
-                  on the real puzzles!
-                </p>
+                  <h2 className="text-2xl font-extrabold">NICE WORK!</h2>
 
-                <button
-                  onClick={handlePlay}
-                  className="w-full rounded-xl bg-[#00C878]
-                             px-5 py-3.5 font-bold text-[#08251A]
-                             transition hover:bg-[#00D583]
-                             active:scale-[0.98]"
-                >
-                  PLAY
-                </button>
+                  <p
+                    className="mx-auto mb-7 mt-3 max-w-xs
+                                text-sm leading-relaxed text-[#A3AAA5]"
+                  >
+                    You covered every block with one line. You're ready to take
+                    on the real puzzles!
+                  </p>
 
-                <button
-                  onClick={startTutorial}
-                  className="mt-3 w-full py-2 text-sm text-[#858D87]
-                             transition hover:text-white"
-                >
-                  Practice again
-                </button>
-              </div>
-            )}
-          </div>
+                  <button
+                    onClick={handlePlay}
+                    className="w-full rounded-xl bg-[#00C878]
+                               px-5 py-3.5 font-bold text-[#08251A]
+                               transition hover:bg-[#00D583]
+                               active:scale-[0.98]"
+                  >
+                    PLAY
+                  </button>
+
+                  <button
+                    onClick={startTutorial}
+                    className="mt-3 w-full py-2 text-sm text-[#858D87]
+                               transition hover:text-white"
+                  >
+                    Practice again
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </>
