@@ -8,6 +8,6 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
     <InstallPrompt appName="One line
-    " description="One line block puzzle" iconSrc="/one_line_block_puzzle.png" />
+    " description="One line block puzzle" iconSrc="/one_line_block_puzzle-80-80.png" />
   </StrictMode>,
 )

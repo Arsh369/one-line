@@ -2,20 +2,22 @@ import { useState, useEffect } from "react";
 import generateLevel from "./levels/level";
 import Tutorial from "./tutorial/Tutorial";
 import SplashScreen from "./splash/SplashScreen";
+import playBlockSound from "./utils/playBlockSound";
+import { Volume2, VolumeOff } from "lucide-react";
 
-function isInstalledPWA() {
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    window.navigator.standalone === true
-  );
-}
+// function isInstalledPWA() {
+//   return (
+//     window.matchMedia("(display-mode: standalone)").matches ||
+//     window.navigator.standalone === true
+//   );
+// }
 
 function App() {
   const [currentLevelIndex, setCurrentLevelIndex] = useState(() => {
     const saved = localStorage.getItem("currentLevel");
     return saved ? Number(saved) : 0;
   });
-  const [showSplash,setShowSplash] = useState(false);
+  const [showSplash, setShowSplash] = useState(false);
   const [grid, setGrid] = useState([]);
   const [path, setPath] = useState([]);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -24,12 +26,12 @@ function App() {
 
   const [startPos, setStartPos] = useState("");
   const [totalPlayable, setTotalPlayable] = useState(0);
-
-  useEffect(()=>{
-    if(isInstalledPWA()){
-      setShowSplash(true);
-    }
-  },[])
+  const [sound, setSound] = useState(false);
+  // useEffect(()=>{
+  //   if(isInstalledPWA()){
+  //     setShowSplash(true);
+  //   }
+  // },[])
 
   useEffect(() => {
     localStorage.setItem("currentLevel", currentLevelIndex);
@@ -92,9 +94,6 @@ function App() {
 
   const handlePointerDown = (e, y, x) => {
     if (isWon) return;
-
-    e.preventDefault();
-
     const pos = `${y}-${x}`;
 
     if (pos === startPos) {
@@ -110,7 +109,6 @@ function App() {
 
   const handleGridPointerMove = (e) => {
     if (!isDrawing || isWon) return;
-
     const element = document.elementFromPoint(e.clientX, e.clientY);
     const cellElement = element?.closest("[data-cell]");
 
@@ -122,6 +120,7 @@ function App() {
   };
 
   const handlePointerEnter = (y, x) => {
+    if(sound){playBlockSound(y, x)};
     const pos = `${y}-${x}`;
     const lastPos = path[path.length - 1];
 
@@ -140,12 +139,14 @@ function App() {
   const handleNextLevel = () => {
     setCurrentLevelIndex(currentLevelIndex + 1);
   };
-
-  if(showSplash){
-    return (
-      <SplashScreen onComplete={()=> setShowSplash(false)}/>
-    );
-  }
+  const handleSound = () => {
+    setSound(!sound);
+  };
+  // if(showSplash){
+  //   return (
+  //     <SplashScreen onComplete={()=> setShowSplash(false)}/>
+  //   );
+  // }
 
   return (
     <div className="min-h-screen bg-[#202322] text-[#F5F5F5] flex flex-col items-center justify-between p-6 font-sans select-none touch-none overflow-hidden relative">
@@ -178,9 +179,12 @@ function App() {
       )}
 
       {/* Top Bar */}
-      <div className="w-full max-w-sm flex justify-center mt-2">
+      <div className="w-full max-w-sm flex items-center justify-between mt-2">
         <div className="px-6 py-2 rounded-xl bg-[#202020] border border-[#303030] font-bold tracking-widest text-xs md:text-sm text-[#F5F5F5] shadow-[0_4px_0_#087A4B]">
           LEVEL {currentLevelIndex}
+        </div>
+        <div className="cursor-pointer" onClick={() => handleSound()}>
+          {sound ? <Volume2 /> : <VolumeOff />}
         </div>
       </div>
 
