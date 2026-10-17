@@ -215,7 +215,7 @@ function App() {
                   x2={getCenter(x2)}
                   y2={getCenter(y2)}
                   stroke="#FFFFFF"
-                  strokeWidth="4"
+                  strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
