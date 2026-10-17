@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import generateLevel from "./levels/level";
+import LEVEL from "./levels/levels"
 import Tutorial from "./tutorial/Tutorial";
 import SplashScreen from "./splash/SplashScreen";
 import playBlockSound from "./utils/playBlockSound";
@@ -15,7 +16,7 @@ import { Volume2, VolumeOff } from "lucide-react";
 function App() {
   const [currentLevelIndex, setCurrentLevelIndex] = useState(() => {
     const saved = localStorage.getItem("currentLevel");
-    return saved ? Number(saved) : 0;
+    return saved ? Number(saved) : 9;
   });
   const [showSplash, setShowSplash] = useState(false);
   const [grid, setGrid] = useState([]);
@@ -38,7 +39,8 @@ function App() {
   }, [currentLevelIndex]);
 
   useEffect(() => {
-    const currentGrid = generateLevel("expert");
+    const currentGrid = LEVEL[currentLevelIndex % LEVEL.length];
+    console.log(currentGrid);
     setGrid(currentGrid);
 
     let playableCount = 0;
